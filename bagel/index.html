@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>繋ぐベーグル</title>
+  <meta name="description" content="もちっと、つなぐ。毎朝焼き上げるベーグルのお店。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- クリックで飛び散るゴマ -->
+  <canvas id="seeds" aria-hidden="true"></canvas>
+
+  <header class="nav">
+    <a class="logo" href="#top">
+      <span class="logo-mark" data-bagel="plain" data-size="34"></span>
+      <span>TSUNAGU <em>BAGEL</em></span>
+    </a>
+    <nav>
+      <a href="#roll">こだわり</a>
+      <a href="#process">つくりかた</a>
+      <a href="#lineup">ラインナップ</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow reveal">MOCHI MOCHI BAGEL</p>
+        <h1 class="reveal">
+          <span class="line"><span>もちっと、</span></span>
+          <span class="line"><span>つなぐ。</span></span>
+        </h1>
+        <p class="lead reveal">一つひとつ手で丸めて、茹でて、焼く。<br>毎朝の食卓と、だれかの一日をつなぐベーグル。</p>
+        <a class="btn reveal" href="#lineup">
+          ラインナップを見る
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+
+      <div class="hero-stage" id="heroStage">
+        <svg class="blob" viewBox="0 0 400 400" aria-hidden="true">
+          <path fill="var(--orange-soft)">
+            <animate attributeName="d" dur="12s" repeatCount="indefinite"
+              values="M322,97Q370,164,352,246Q334,328,251,352Q168,376,106,318Q44,260,55,172Q66,84,146,54Q226,24,322,97Z;
+                      M334,112Q362,196,336,272Q310,348,222,356Q134,364,86,288Q38,212,72,136Q106,60,192,50Q278,40,334,112Z;
+                      M312,86Q380,152,356,238Q332,324,246,358Q160,392,98,322Q36,252,62,160Q88,68,172,46Q256,24,312,86Z;
+                      M322,97Q370,164,352,246Q334,328,251,352Q168,376,106,318Q44,260,55,172Q66,84,146,54Q226,24,322,97Z"/>
+          </path>
+        </svg>
+
+        <svg class="ring-text" viewBox="0 0 300 300" aria-hidden="true">
+          <defs><path id="circ" d="M150,150 m-128,0 a128,128 0 1,1 256,0 a128,128 0 1,1 -256,0"/></defs>
+          <text><textPath href="#circ">FRESHLY BAKED EVERY MORNING ・ MOCHI MOCHI ・ HAND ROLLED ・ </textPath></text>
+        </svg>
+
+        <div class="hero-bagel parallax" data-depth="18">
+          <img class="cutout" data-cutout="hero" alt="焼きたてのベーグル" data-bagel="sesame" data-size="360">
+        </div>
+
+        <!-- 浮遊グラフィック -->
+        <span class="float f1 parallax" data-depth="40"><span data-bagel="blueberry" data-size="90"></span></span>
+        <span class="float f2 parallax" data-depth="-30"><span data-bagel="choco" data-size="70"></span></span>
+        <span class="float f3 parallax" data-depth="55">
+          <svg viewBox="0 0 40 40"><path d="M20 2 L24 16 L38 20 L24 24 L20 38 L16 24 L2 20 L16 16Z" fill="var(--orange)"/></svg>
+        </span>
+        <span class="float f4 parallax" data-depth="-50">
+          <svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="14" fill="none" stroke="var(--ink)" stroke-width="3" stroke-dasharray="4 6"/></svg>
+        </span>
+        <span class="float f5 parallax" data-depth="25">
+          <svg viewBox="0 0 60 20"><path d="M2 10 Q 12 0 22 10 T 42 10 T 58 10" fill="none" stroke="var(--orange-deep)" stroke-width="3" stroke-linecap="round"/></svg>
+        </span>
+
+        <p class="hint">クリックしてみて ↓</p>
+      </div>
+    </section>
+
+    <!-- MARQUEE -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>Plain</span><i data-bagel="plain" data-size="44"></i>
+        <span>Sesame</span><i data-bagel="sesame" data-size="44"></i>
+        <span>Blueberry</span><i data-bagel="blueberry" data-size="44"></i>
+        <span>Chocolate</span><i data-bagel="choco" data-size="44"></i>
+        <span>Cinnamon</span><i data-bagel="cinnamon" data-size="44"></i>
+        <span>Matcha</span><i data-bagel="matcha" data-size="44"></i>
+      </div>
+    </div>
+
+    <!-- ROLL : スクロールでベーグルが転がる -->
+    <section class="roll" id="roll">
+      <div class="roll-sticky">
+        <div class="roll-words">
+          <p class="rw" data-at="0.05"><span class="num">01</span>外は、<strong>パリッ。</strong></p>
+          <p class="rw" data-at="0.35"><span class="num">02</span>中は、<strong>もっちり。</strong></p>
+          <p class="rw" data-at="0.65"><span class="num">03</span>噛むほど、<strong>ほんのり甘い。</strong></p>
+        </div>
+        <div class="roll-track">
+          <div class="roll-bagel" id="rollBagel">
+            <img class="cutout" data-cutout="roll" alt="" data-bagel="sesame" data-size="300">
+          </div>
+          <div class="roll-shadow" id="rollShadow"></div>
+          <svg class="roll-floor" viewBox="0 0 1000 20" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 10 H1000" stroke="var(--ink)" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="roll-progress"><span id="rollBar"></span></div>
+      </div>
+    </section>
+
+    <!-- HOLE : ベーグルの穴から写真がひらく（くり抜き） -->
+    <section class="hole" id="hole">
+      <div class="hole-sticky">
+        <div class="hole-photo" id="holePhoto">
+          <img data-photo="scene" alt="店内の様子">
+          <div class="hole-fallback" aria-hidden="true"></div>
+        </div>
+        <div class="hole-copy" id="holeCopy">
+          <p class="eyebrow">THROUGH THE HOLE</p>
+          <h2>穴のむこうに、<br>いつもの朝。</h2>
+          <p>焼きあがりの香りがひろがる、朝7時の厨房から。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="process" id="process">
+      <div class="section-head">
+        <p class="eyebrow">HOW WE MAKE</p>
+        <h2>ひとつのベーグルが<br>できるまで。</h2>
+      </div>
+      <ol class="steps">
+        <li class="step">
+          <svg viewBox="0 0 120 120" class="draw" aria-hidden="true">
+            <path pathLength="1" d="M20 80 Q60 40 100 80"/>
+            <path pathLength="1" d="M30 80 Q30 100 60 100 Q90 100 90 80"/>
+            <path pathLength="1" d="M45 60 Q60 30 75 60"/>
+            <circle pathLength="1" cx="60" cy="28" r="6"/>
+          </svg>
+          <span class="step-no">STEP 01</span>
+          <h3>こねる</h3>
+          <p>国産小麦と天然酵母。<br>生地の声を聞きながら、じっくり。</p>
+        </li>
+        <li class="step">
+          <svg viewBox="0 0 120 120" class="draw" aria-hidden="true">
+            <circle pathLength="1" cx="60" cy="60" r="36"/>
+            <circle pathLength="1" cx="60" cy="60" r="12"/>
+            <path pathLength="1" d="M60 14 A46 46 0 0 1 104 50"/>
+            <path pathLength="1" d="M98 42 L104 50 L94 52"/>
+          </svg>
+          <span class="step-no">STEP 02</span>
+          <h3>まるめる</h3>
+          <p>ひとつずつ手で輪に。<br>つなぎ目は、しっかりと。</p>
+        </li>
+        <li class="step">
+          <svg viewBox="0 0 120 120" class="draw" aria-hidden="true">
+            <path pathLength="1" d="M18 58 H102 V92 Q102 104 90 104 H30 Q18 104 18 92 Z"/>
+            <path pathLength="1" d="M34 40 Q28 30 34 20"/>
+            <path pathLength="1" d="M60 40 Q54 30 60 20"/>
+            <path pathLength="1" d="M86 40 Q80 30 86 20"/>
+            <path pathLength="1" d="M30 76 Q45 68 60 76 T90 76"/>
+          </svg>
+          <span class="step-no">STEP 03</span>
+          <h3>ゆでる</h3>
+          <p>焼く前にお湯へ。<br>これが、もちもちの秘密。</p>
+        </li>
+        <li class="step">
+          <svg viewBox="0 0 120 120" class="draw" aria-hidden="true">
+            <rect pathLength="1" x="16" y="28" width="88" height="70" rx="8"/>
+            <rect pathLength="1" x="28" y="44" width="64" height="40" rx="4"/>
+            <circle pathLength="1" cx="30" cy="36" r="2"/>
+            <circle pathLength="1" cx="42" cy="36" r="2"/>
+            <path pathLength="1" d="M40 72 Q60 56 80 72"/>
+          </svg>
+          <span class="step-no">STEP 04</span>
+          <h3>やく</h3>
+          <p>高温で一気に。<br>こんがり、つやつやに。</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- LINEUP -->
+    <section class="lineup" id="lineup">
+      <div class="section-head">
+        <p class="eyebrow">LINEUP</p>
+        <h2>今日は、どれにする？</h2>
+      </div>
+      <div class="cards">
+        <article class="card" style="--tint:#FFE3C9">
+          <div class="card-img"><img class="cutout" data-cutout="plain" alt="プレーン" data-bagel="plain" data-size="220"></div>
+          <h3>プレーン</h3><p>まずはこれ。小麦の甘みをまっすぐに。</p>
+        </article>
+        <article class="card" style="--tint:#FFEFD9">
+          <div class="card-img"><img class="cutout" data-cutout="sesame" alt="セサミ" data-bagel="sesame" data-size="220"></div>
+          <h3>セサミ</h3><p>香ばしい白ごまをたっぷり。</p>
+        </article>
+        <article class="card" style="--tint:#F3E4F2">
+          <div class="card-img"><img class="cutout" data-cutout="blueberry" alt="ブルーベリー" data-bagel="blueberry" data-size="220"></div>
+          <h3>ブルーベリー</h3><p>甘酸っぱい果実をごろっと練り込み。</p>
+        </article>
+        <article class="card" style="--tint:#F2E2D6">
+          <div class="card-img"><img class="cutout" data-cutout="choco" alt="チョコ" data-bagel="choco" data-size="220"></div>
+          <h3>チョコ</h3><p>ほろ苦いカカオとチョコチップ。</p>
+        </article>
+        <article class="card" style="--tint:#FBE6D2">
+          <div class="card-img"><img class="cutout" data-cutout="cinnamon" alt="シナモンレーズン" data-bagel="cinnamon" data-size="220"></div>
+          <h3>シナモンレーズン</h3><p>くるっと香るシナモンの渦。</p>
+        </article>
+        <article class="card" style="--tint:#E7F0DC">
+          <div class="card-img"><img class="cutout" data-cutout="matcha" alt="抹茶" data-bagel="matcha" data-size="220"></div>
+          <h3>抹茶</h3><p>京都の抹茶と、白あんを少し。</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+      <div class="cta-ring" aria-hidden="true">
+        <span data-bagel="sesame" data-size="140"></span>
+        <span data-bagel="blueberry" data-size="140"></span>
+        <span data-bagel="plain" data-size="140"></span>
+        <span data-bagel="choco" data-size="140"></span>
+        <span data-bagel="matcha" data-size="140"></span>
+        <span data-bagel="cinnamon" data-size="140"></span>
+      </div>
+      <div class="cta-copy">
+        <p class="eyebrow">OPEN 7:00 – SOLD OUT</p>
+        <h2>焼きたてを、<br>つつんで待ってます。</h2>
+        <a class="btn btn-light" href="#top">オンラインショップへ</a>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footer">
+    <p class="logo"><span data-bagel="plain" data-size="28"></span> TSUNAGU <em>BAGEL</em></p>
+    <p class="copy">&copy; Tsunagu Bagel</p>
+  </footer>
+
+  <script src="assets/manifest.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
