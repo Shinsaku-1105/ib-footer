@@ -12,7 +12,7 @@ Jev は TypeSafe の判定専用モデル。文章を書かず「選ぶ・採点
 | # | 対策 | 仕組み | 効果 |
 | --- | --- | --- | --- |
 | 1 | **ブラウザ操作は jev-browser** | ページの要素一覧を Jev が読み、どこを押すか決める。Claude には「done / stuck」などの結果だけが返る | 作者の計測で Claude が読む量は 557k → 8.3k トークン（41 タスク合計、中央値 1/5）。比較対象はテキストのスナップショットなので、キャプチャ方式と比べれば差はもっと大きい。Jev 側の 602k トークンは約 $0.03 |
-| 2 | **画面操作はサブエージェント（`web-operator`, Sonnet）に任せる** | キャプチャはサブエージェントの文脈にだけ溜まり、終われば捨てられる。メインには数行の報告だけが戻る | メインの会話がキャプチャで膨らまない。操作自体も Opus より安い Sonnet で動く |
+| 2 | **画面操作はサブエージェント（`web-operator`, Sonnet）に任せ、メインでは使えなくする** | Claude in Chrome・computer use・jev-browser はフックでメインの会話からの呼び出しを止め、`web-operator` の中でだけ動かす。キャプチャはサブエージェントの文脈にだけ溜まり、終われば捨てられる。メインには数行の報告だけが戻る | メインの会話がキャプチャで膨らまない。操作自体も Opus より安い Sonnet で動く |
 | 3 | fast-jev-compaction | 圧縮を「要約」から「不要なツール結果の削除」に置き換える | キャプチャ中心の会話では効きにくい（下記） |
 
 1 と 2 は Jev なしでも一部効くが、組み合わせると一番効く。
@@ -32,11 +32,19 @@ Jev は TypeSafe の判定専用モデル。文章を書かず「選ぶ・採点
 
 | 名前 | 中身 |
 | --- | --- |
-| `jev-browser` (MCP) | ブラウザ操作ツール 8 個。定義は約 1.4k トークン（Claude Code は MCP ツールを必要になるまで遅延読み込みする） |
-| `web-operator` | ブラウザと computer use の担当（Sonnet, medium）。jev-browser の `browser_do` を優先し、キャプチャは見た目の確認が必要なときだけ撮る。パスワード入力や取り消せない操作はしない |
+| `web-operator` | 画面操作の担当（Sonnet, medium）。使う順は ① jev-browser（ログイン不要のページ）→ ② Claude in Chrome（ログイン済みの Chrome が必要なとき。ページの文字情報を優先して読む）→ ③ computer use（ブラウザ以外のアプリ）。キャプチャは判断や確認に必要なときだけ撮る。パスワード入力や、購入・送信・削除などの取り消せない操作はしない |
+| jev-browser | `web-operator` の定義の中にだけ置く。メインの会話には読み込まれないので、ツール定義のトークンもかからない |
+| 画面操作ガード（`screen-guard.sh`） | `settings.json` の PreToolUse フック。メインの会話から `mcp__claude-in-chrome__*`・`mcp__computer-use__*`・`mcp__jev-browser__*` を呼ぶと止め、「web-operator に任せて」と Claude に返す。サブエージェントからの呼び出しは通す |
 | `lane-small` / `lane-medium` | 機械的な作業は Haiku、普通の実装は Sonnet |
-| `~/.claude/CLAUDE.md` の追記 | 約 170 トークン。「画面操作は web-operator に任せ、メインで撮らない」など |
+| `~/.claude/CLAUDE.md` の追記 | 約 180 トークン。上のルールの説明 |
 | fast-jev-compaction | 下記 |
+
+### 使い方の変化
+
+- 今までどおり「このサイトで〇〇して」と頼めばよい。Claude が `web-operator` に任せ、結果だけを受け取る
+- Claude in Chrome と computer use は今までどおり有効にしておく（`/chrome`、`/mcp` の設定はそのまま）
+- **メインで直接画面を見ながら一緒に作業したいとき**は、`JEV_KIT_ALLOW_MAIN_SCREEN=1 claude` で起動すればガードが外れる
+- computer use は操作するアプリごとに許可を求めることがある。サブエージェント経由でも許可の確認が出るかは、Mac での確認がまだ。許可が出ずに止まる場合は上の方法でガードを外し、報告してほしい
 
 ## fast-jev-compaction について
 
@@ -72,7 +80,7 @@ Claude からはコマンドを 1 回呼ぶだけで、結果が JSON で返る�
 ```sh
 git pull
 cd claude-code/jev
-./setup-mac.sh               # jev-browser + レーン + fast-jev-compaction
+./setup-mac.sh               # 全部入り
 ./setup-mac.sh --no-browser  # jev-browser なし
 ./setup-mac.sh --uninstall   # 全部元に戻す
 ```
@@ -82,17 +90,18 @@ cd claude-code/jev
 1. Claude Code 2.1.274 以上であることを確認
 2. API キーを macOS キーチェーン（`typesafe-api-key`）に保存。ファイルには書かない
 3. fast-jev-compaction を確認済みの commit `e3f262a` に固定して入れる。上の設定を適用し、`settings.json` に `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` を追加、`~/.zshrc` にキーチェーンからキーを読む行を追加
-4. `~/.claude/agents/` に `web-operator.md`・`lane-small.md`・`lane-medium.md` を置き、`~/.claude/CLAUDE.md` に短いルールを追記
-5. jev-browser 0.1.1 と Chromium を入れ、キーチェーンからキーを読むラッパー経由で MCP に登録（このリポジトリを別の場所に移したら再実行）
+4. jev-browser 0.1.1 用の Chromium を入れる
+5. `~/.claude/agents/` に `web-operator.md`（jev-browser 入り。キーはキーチェーンから読む）・`lane-small.md`・`lane-medium.md` を置き、`~/.claude/CLAUDE.md` に短いルールを追記
+6. `settings.json` に画面操作ガードのフックを登録
+
+このリポジトリを別の場所に移したら、`setup-mac.sh` を再実行する（フックと jev-browser がこのフォルダのスクリプトを指しているため）。
 
 変更するファイル（`settings.json`、`CLAUDE.md`）は、変更前に `.bak.<日時>` として保存する。
 
-**今使っているブラウザ系ツールとの関係**: Playwright MCP や Claude in Chrome を入れている場合、Claude がそちらを選ぶことがある。
-jev-browser に寄せたいなら、それらを無効にするか、依頼時に「web-operator に任せて」と書く。
 
 ## 注意点
 
 - **データ送信**: jev-browser はページの要素一覧と表示テキストを、fast-jev は会話（発言とツールの入力）を `api.typesafe.ai` に送る。送信先はこの 1 箇所だけ（コードで確認済み）。キャプチャは送らない。社外秘の画面を操作するときは判断すること
 - **試験提供中の機能**: fast-jev は Claude Code の function hooks を使うので、更新で動かなくなる可能性がある。その場合も自動で通常の要約に戻るだけ
-- **確認済み**: fast-jev はテスト 29 件通過・インストール動作を確認。レーンは指定モデルで起動することを確認。`web-operator` は Sonnet で起動し、jev-browser を優先する方針で動くことを確認。jev-browser は MCP サーバーの起動と 8 ツールの公開を確認
-- **未確認**: キーを使った実際のブラウザ操作（この環境に TypeSafe のキーがなく、Chromium の版も合わないため）。Mac 上でのセットアップスクリプトの実行
+- **確認済み**: fast-jev はテスト 29 件通過・インストール動作を確認。レーンは指定モデルで起動することを確認。`~/.claude/agents` に置いた `web-operator` の中で jev-browser が起動し、呼べることを確認。メインの会話には jev-browser のツールが出ず、直接呼ぶとガードで止まることを確認
+- **未確認**: キーを使った実際のブラウザ操作（この環境に TypeSafe のキーがなく、Chromium の版も合わないため）。Claude in Chrome と computer use は Mac 専用なので、サブエージェントからの動作はこの環境では試せていない。Mac 上でのセットアップスクリプトの実行

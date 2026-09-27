@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Jev を使ったトークン削減セットを Mac の Claude Code に導入する。
-#   ./setup-mac.sh                 jev-browser (MCP) + サブエージェントのレーン + fast-jev-compaction
+#   ./setup-mac.sh                 fast-jev-compaction + web-operator(jev-browser) + レーン + 画面操作ガード
 #   ./setup-mac.sh --no-browser    jev-browser を入れない
 #   ./setup-mac.sh --uninstall     すべて撤去
 # API キーは macOS キーチェーンにだけ保存し、リポジトリや設定ファイルには書かない。
@@ -21,6 +21,7 @@ MIN_CLAUDE="2.1.274"
 PLUGIN_CONFIG=(compactAtPercent=50 truncateHeadChars=150)
 RC_MARK="fast-jev-compaction"
 MD_MARK="ib-footer-jev:lanes"
+GUARD_MATCHER="mcp__claude-in-chrome__.*|mcp__computer-use__.*|mcp__jev-browser__.*"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 say() { echo "==> $*"; }
@@ -54,6 +55,20 @@ set_hooks_flag() {  # settings.json の env.CLAUDE_CODE_ENABLE_FUNCTION_HOOKS �
   mv "$tmp" "$SETTINGS"
 }
 
+set_screen_guard() {  # settings.json の PreToolUse に screen-guard.sh を登録/削除
+  mkdir -p "$CLAUDE_DIR"
+  [ -f "$SETTINGS" ] || echo '{}' > "$SETTINGS"
+  backup "$SETTINGS"
+  local tmp; tmp="$(mktemp)"
+  jq --arg cmd "$KIT/screen-guard.sh" --arg m "$GUARD_MATCHER" --arg on "$1" '
+    .hooks.PreToolUse = ([(.hooks.PreToolUse // [])[]
+      | select([.hooks[]?.command // "" | test("screen-guard\\.sh")] | any | not)]
+      + (if $on == "on" then [{matcher: $m, hooks: [{type: "command", command: $cmd}]}] else [] end))
+    | if .hooks.PreToolUse == [] then del(.hooks.PreToolUse) else . end
+    | if .hooks == {} then del(.hooks) else . end' "$SETTINGS" > "$tmp"
+  mv "$tmp" "$SETTINGS"
+}
+
 [ "$(uname)" = Darwin ] || die "macOS 用のスクリプトです"
 command -v claude >/dev/null || die "claude コマンドが見つかりません"
 command -v jq >/dev/null || die "jq が必要です (macOS 15 以降は標準搭載 / brew install jq)"
@@ -69,8 +84,9 @@ case "${1:-}" in
     say "レーンを削除"
     rm -f "$CLAUDE_DIR/agents/lane-small.md" "$CLAUDE_DIR/agents/lane-medium.md" "$CLAUDE_DIR/agents/web-operator.md"
     backup "$CLAUDE_MD"; strip_block "$CLAUDE_MD" "$MD_MARK"
-    say "jev-browser を削除"
-    claude mcp remove -s user jev-browser >/dev/null 2>&1 || true
+    say "画面操作ガードを削除"
+    set_screen_guard off
+    claude mcp remove -s user jev-browser >/dev/null 2>&1 || true   # 旧版の登録
     say "完了。キーチェーンのキーも消す場合: security delete-generic-password -s $KEY_SERVICE"
     exit 0 ;;
   --no-browser) WITH_BROWSER=0 ;;
@@ -115,24 +131,32 @@ export TYPESAFE_API_KEY="\$(security find-generic-password -s $KEY_SERVICE -w 2>
 # <<< $RC_MARK END
 RCEOF
 
-# 3. サブエージェントのレーン（Jev 不要、データ送信なし）
-mkdir -p "$CLAUDE_DIR/agents"
-cp "$KIT/agents/lane-small.md" "$KIT/agents/lane-medium.md" "$KIT/agents/web-operator.md" "$CLAUDE_DIR/agents/"
-backup "$CLAUDE_MD"; strip_block "$CLAUDE_MD" "$MD_MARK"
-{ [ -s "$CLAUDE_MD" ] && echo; cat "$KIT/claude-md-block.md"; } >> "$CLAUDE_MD"
-say "レーン (web-operator / lane-small / lane-medium) を追加"
-
-# 4. jev-browser（--no-browser で省略）
+# 3. jev-browser の準備（--no-browser で省略）
 if [ "$WITH_BROWSER" = 1 ] && ! command -v npx >/dev/null; then
   echo "WARN: Node.js (npx) がないので jev-browser を飛ばします。brew install node の後に再実行してください" >&2
   WITH_BROWSER=0
 fi
 if [ "$WITH_BROWSER" = 1 ]; then
   npx -y -p jev-browser@0.1.1 playwright install chromium
-  claude mcp remove -s user jev-browser >/dev/null 2>&1 || true
-  claude mcp add -s user jev-browser -- "$KIT/jev-browser-mcp.sh"
-  say "jev-browser を MCP に登録（このリポジトリの場所を移動したら再実行）"
 fi
+claude mcp remove -s user jev-browser >/dev/null 2>&1 || true   # 旧版の登録（メインに読み込まれる）を消す
+
+# 4. サブエージェント（Jev 不要、データ送信なし）。jev-browser は web-operator の中だけに定義する
+mkdir -p "$CLAUDE_DIR/agents"
+cp "$KIT/agents/lane-small.md" "$KIT/agents/lane-medium.md" "$CLAUDE_DIR/agents/"
+if [ "$WITH_BROWSER" = 1 ]; then
+  sed "s|__KIT__|$KIT|g" "$KIT/agents/web-operator.md" > "$CLAUDE_DIR/agents/web-operator.md"
+else
+  sed '/# jev-browser BEGIN/,/# jev-browser END/d' "$KIT/agents/web-operator.md" > "$CLAUDE_DIR/agents/web-operator.md"
+fi
+backup "$CLAUDE_MD"; strip_block "$CLAUDE_MD" "$MD_MARK"
+{ [ -s "$CLAUDE_MD" ] && echo; cat "$KIT/claude-md-block.md"; } >> "$CLAUDE_MD"
+say "サブエージェント (web-operator / lane-small / lane-medium) を追加"
+
+# 5. 画面操作ツールをメインの会話で止めるフック
+set_screen_guard on
+say "画面操作ガードを登録（Chrome / computer use / jev-browser はサブエージェントからだけ使える）"
+say "このリポジトリの場所を移動したら setup-mac.sh を再実行してください"
 
 say "完了。新しいターミナルで claude を起動し、/compact 後に"
 say "  'fast-jev-compaction: kept N/M messages' のトーストが出れば有効です。"
