@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Jev を使ったトークン削減セットを Mac の Claude Code に導入する。
-#   ./setup-mac.sh                 fast-jev-compaction + サブエージェントのレーン
-#   ./setup-mac.sh --with-browser  上に加えて jev-browser (MCP)
+#   ./setup-mac.sh                 jev-browser (MCP) + サブエージェントのレーン + fast-jev-compaction
+#   ./setup-mac.sh --no-browser    jev-browser を入れない
 #   ./setup-mac.sh --uninstall     すべて撤去
 # API キーは macOS キーチェーンにだけ保存し、リポジトリや設定ファイルには書かない。
 set -euo pipefail
@@ -18,7 +18,7 @@ CLAUDE_MD="$CLAUDE_DIR/CLAUDE.md"
 RC="$HOME/.zshrc"
 MIN_CLAUDE="2.1.274"
 # トークン削減寄りの設定（理由は README.md）。デフォルトに戻すなら空にする
-PLUGIN_CONFIG=(compactAtPercent=50 minReductionRatio=0.4 truncateHeadChars=150)
+PLUGIN_CONFIG=(compactAtPercent=50 truncateHeadChars=150)
 RC_MARK="fast-jev-compaction"
 MD_MARK="ib-footer-jev:lanes"
 
@@ -58,7 +58,7 @@ set_hooks_flag() {  # settings.json の env.CLAUDE_CODE_ENABLE_FUNCTION_HOOKS �
 command -v claude >/dev/null || die "claude コマンドが見つかりません"
 command -v jq >/dev/null || die "jq が必要です (macOS 15 以降は標準搭載 / brew install jq)"
 
-WITH_BROWSER=0
+WITH_BROWSER=1
 case "${1:-}" in
   --uninstall)
     say "fast-jev-compaction を削除"
@@ -67,13 +67,13 @@ case "${1:-}" in
     set_hooks_flag off
     strip_block "$RC" "$RC_MARK"
     say "レーンを削除"
-    rm -f "$CLAUDE_DIR/agents/lane-small.md" "$CLAUDE_DIR/agents/lane-medium.md"
+    rm -f "$CLAUDE_DIR/agents/lane-small.md" "$CLAUDE_DIR/agents/lane-medium.md" "$CLAUDE_DIR/agents/web-operator.md"
     backup "$CLAUDE_MD"; strip_block "$CLAUDE_MD" "$MD_MARK"
     say "jev-browser を削除"
     claude mcp remove -s user jev-browser >/dev/null 2>&1 || true
     say "完了。キーチェーンのキーも消す場合: security delete-generic-password -s $KEY_SERVICE"
     exit 0 ;;
-  --with-browser) WITH_BROWSER=1 ;;
+  --no-browser) WITH_BROWSER=0 ;;
   "") ;;
   *) die "不明なオプション: $1" ;;
 esac
@@ -117,14 +117,17 @@ RCEOF
 
 # 3. サブエージェントのレーン（Jev 不要、データ送信なし）
 mkdir -p "$CLAUDE_DIR/agents"
-cp "$KIT/agents/lane-small.md" "$KIT/agents/lane-medium.md" "$CLAUDE_DIR/agents/"
+cp "$KIT/agents/lane-small.md" "$KIT/agents/lane-medium.md" "$KIT/agents/web-operator.md" "$CLAUDE_DIR/agents/"
 backup "$CLAUDE_MD"; strip_block "$CLAUDE_MD" "$MD_MARK"
 { [ -s "$CLAUDE_MD" ] && echo; cat "$KIT/claude-md-block.md"; } >> "$CLAUDE_MD"
-say "レーン (lane-small / lane-medium) を追加"
+say "レーン (web-operator / lane-small / lane-medium) を追加"
 
-# 4. jev-browser（任意）
+# 4. jev-browser（--no-browser で省略）
+if [ "$WITH_BROWSER" = 1 ] && ! command -v npx >/dev/null; then
+  echo "WARN: Node.js (npx) がないので jev-browser を飛ばします。brew install node の後に再実行してください" >&2
+  WITH_BROWSER=0
+fi
 if [ "$WITH_BROWSER" = 1 ]; then
-  command -v npx >/dev/null || die "jev-browser には Node.js (npx) が必要です: brew install node"
   npx -y -p jev-browser@0.1.1 playwright install chromium
   claude mcp remove -s user jev-browser >/dev/null 2>&1 || true
   claude mcp add -s user jev-browser -- "$KIT/jev-browser-mcp.sh"
